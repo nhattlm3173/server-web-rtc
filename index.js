@@ -8,6 +8,7 @@ const io = require("socket.io")(process.env.PORT || 3000, {
 });
 const arrUserInfo = [];
 const arrWatchStreamUsers = [];
+const chatHistory = [];
 let currentStreamer = null;
 io.on("connection", (socket) => {
   socket.on("USER_REGISTER", (user) => {
@@ -19,13 +20,23 @@ io.on("connection", (socket) => {
     if (isExist) {
       return socket.emit("REGISTER_FALSE");
     }
-    arrUserInfo.push(user);
+    arrUserInfo.push({
+      peerID: user.peerID,
+      username: user.username,
+      publicKey: user.publicKey,
+      socketID: socket.id,
+    });
     socket.emit("ONLINE_LIST", arrUserInfo);
     socket.broadcast.emit("HAVE_NEW_USER", user);
 
     socket.on("USER_VIEW_LIVESTREAM", (user) => {
       console.log(user);
-      arrWatchStreamUsers.push(user);
+      if (
+        arrWatchStreamUsers.findIndex((u) => u.peerID === user.peerID) === -1
+      ) {
+        arrWatchStreamUsers.push(user);
+      }
+
       console.log(arrWatchStreamUsers);
       if (currentStreamer) {
         console.log(currentStreamer);
@@ -53,11 +64,60 @@ io.on("connection", (socket) => {
       (user) => user.peerID === socket.peerID
     );
     arrUserInfo.splice(index, 1);
-    arrWatchStreamUsers.splice(index, 1);
+    arrWatchStreamUsers.splice(index2, 1);
     console.log(socket.peerID);
     io.emit("SOMEONE_DISCONNECT", socket.peerID);
     if (socket.peerID === currentStreamer) {
       currentStreamer = null; // Xóa streamer nếu người livestream thoát
+    }
+  });
+  // Khi người dùng gọi
+  socket.on("CALL_USER", ({ callerPeerID, callerName, receiverPeerID }) => {
+    // Tìm người nhận trong danh sách người dùng online và gửi thông tin người gọi
+    const receiverSocket = arrUserInfo.find(
+      (user) => user.peerID === receiverPeerID
+    );
+    // console.log("tao: " + receiverSocket);
+    if (receiverSocket) {
+      // Gửi thông báo cho người nhận, bao gồm peerID của người gọi
+      io.to(receiverSocket.socketID).emit("INCOMING_CALL", {
+        callerPeerID,
+        callerName,
+        receiverPeerID,
+      });
+    }
+  });
+  socket.on("REJECT_CALL", ({ callerPeerID, username }) => {
+    const receiverSocket = arrUserInfo.find(
+      (user) => user.peerID === callerPeerID
+    );
+    const message = `Người dùng ${username} từ chối cuộc gọi!`;
+    // console.log(message);
+    io.to(receiverSocket.socketID).emit("CALL_REJECTION_NOTIFICATION", message);
+  });
+  // socket.emit("CHAT_MESSAGE_HISTORY", chatHistory);
+
+  socket.on("NEW_CHAT_MESSAGE", (data) => {
+    const { userID, message } = data;
+    const user = arrUserInfo.find((u) => u.peerID === userID);
+    if (user) {
+      const chatMessage = { username: user.username, message };
+      // chatHistory.push(chatMessage);
+      io.emit("RECEIVE_CHAT_MESSAGE", chatMessage);
+    }
+  });
+
+  //COMMENT
+
+  socket.emit("CHAT_COMMENT_HISTORY", chatHistory);
+
+  socket.on("NEW_CHAT_COMMENT", (data) => {
+    const { userID, message } = data;
+    const user = arrUserInfo.find((u) => u.peerID === userID);
+    if (user) {
+      const chatMessage = { username: user.username, message };
+      chatHistory.push(chatMessage); // Lưu tin nhắn vào lịch sử
+      io.emit("RECEIVE_CHAT_COMMENT", chatMessage);
     }
   });
 });
