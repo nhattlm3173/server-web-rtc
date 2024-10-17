@@ -10,6 +10,7 @@ const arrUserInfo = [];
 const arrWatchStreamUsers = [];
 const chatHistory = [];
 let currentStreamer = null;
+let streamID;
 io.on("connection", (socket) => {
   socket.on("USER_REGISTER", (user) => {
     const isExist = arrUserInfo.some((u) => {
@@ -106,15 +107,31 @@ io.on("connection", (socket) => {
     }
   });
 
-  //COMMENT
+  // socket.on("CHAT_COMMENT_HISTORY", (streamId) => {
 
-  socket.emit("CHAT_COMMENT_HISTORY", chatHistory);
+  // });
+  //COMMENT
+  socket.on("CREATE_CHAT_COMMENT_ROOM", (streamId) => {
+    // Lọc lịch sử chat theo streamerID
+    const messages = chatHistory.filter((u) => u.streamerID === streamId);
+    streamID = streamId;
+    console.log(messages); // Log ra lịch sử comment
+
+    // Gửi lịch sử comment về cho người dùng trong room
+    if (messages.length > 0) {
+      io.to(socket.id).emit("RECEIVE_CHAT_COMMENT_HISTORY", messages);
+    }
+  });
 
   socket.on("NEW_CHAT_COMMENT", (data) => {
-    const { userID, message } = data;
+    const { userID, message, streamerID } = data;
     const user = arrUserInfo.find((u) => u.peerID === userID);
     if (user) {
-      const chatMessage = { username: user.username, message };
+      const chatMessage = {
+        streamerID: streamerID,
+        username: user.username,
+        message,
+      };
       chatHistory.push(chatMessage); // Lưu tin nhắn vào lịch sử
       io.emit("RECEIVE_CHAT_COMMENT", chatMessage);
     }
