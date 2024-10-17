@@ -52,7 +52,6 @@ io.on("connection", (socket) => {
     io.to(currentStreamer).emit("GET_WATCHSTREAMLIST", arrWatchStreamUsers);
     socket.broadcast.emit("SOMEONE_LIVESTREAMING", {
       streamer: user.peerID,
-      watchStreamUsers: arrWatchStreamUsers,
     });
   });
 
