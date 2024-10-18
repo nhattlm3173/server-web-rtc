@@ -87,6 +87,7 @@ io.on("connection", (socket) => {
       });
     }
   });
+
   socket.on("REJECT_CALL", ({ callerPeerID, username }) => {
     const receiverSocket = arrUserInfo.find(
       (user) => user.peerID === callerPeerID
@@ -96,7 +97,14 @@ io.on("connection", (socket) => {
     io.to(receiverSocket.socketID).emit("CALL_REJECTION_NOTIFICATION", message);
   });
   // socket.emit("CHAT_MESSAGE_HISTORY", chatHistory);
-
+  socket.on("REQUEST_STOP_CALLING", (receiverID) => {
+    const receiverSocket = arrUserInfo.find(
+      (user) => user.peerID === receiverID
+    );
+    if (receiverSocket) {
+      io.to(receiverSocket.socketID).emit("STOP_CALLING");
+    }
+  });
   socket.on("NEW_CHAT_MESSAGE", (data) => {
     const { userID, message } = data;
     const user = arrUserInfo.find((u) => u.peerID === userID);
