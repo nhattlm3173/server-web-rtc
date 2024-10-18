@@ -8,7 +8,7 @@ const io = require("socket.io")(process.env.PORT || 3000, {
 });
 const arrUserInfo = [];
 const arrWatchStreamUsers = [];
-const chatHistory = [];
+let chatHistory = [];
 let currentStreamer = null;
 let streamID;
 io.on("connection", (socket) => {
@@ -65,7 +65,7 @@ io.on("connection", (socket) => {
     );
     arrUserInfo.splice(index, 1);
     arrWatchStreamUsers.splice(index2, 1);
-    console.log(socket.peerID);
+    // console.log(socket.peerID);
     io.emit("SOMEONE_DISCONNECT", socket.peerID);
     if (socket.peerID === currentStreamer) {
       currentStreamer = null; // Xóa streamer nếu người livestream thoát
@@ -123,7 +123,7 @@ io.on("connection", (socket) => {
     // Lọc lịch sử chat theo streamerID
     const messages = chatHistory.filter((u) => u.streamerID === streamId);
     streamID = streamId;
-    console.log(messages); // Log ra lịch sử comment
+    // console.log(messages); // Log ra lịch sử comment
 
     // Gửi lịch sử comment về cho người dùng trong room
     if (messages.length > 0) {
@@ -134,6 +134,7 @@ io.on("connection", (socket) => {
   socket.on("NEW_CHAT_COMMENT", (data) => {
     const { userID, message, streamerID } = data;
     const user = arrUserInfo.find((u) => u.peerID === userID);
+    const streamerSocket = arrUserInfo.find((u) => u.peerID === streamerID);
     if (user) {
       const chatMessage = {
         streamerID: streamerID,
@@ -142,6 +143,23 @@ io.on("connection", (socket) => {
       };
       chatHistory.push(chatMessage); // Lưu tin nhắn vào lịch sử
       io.emit("RECEIVE_CHAT_COMMENT", chatMessage);
+      if (streamerSocket) {
+        io.to(streamerSocket.socketID).emit(
+          "RECEIVE_CHAT_COMMENT_FOR_STREAMER",
+          chatMessage
+        );
+      }
     }
+  });
+  // socket.on("RELOAD_COMMENT_STREAN", (userID) => {
+  //   const messages = chatHistory.filter((u) => u.streamerID === userID);
+  //   if (messages.length > 0) {
+  //     io.to(socket.id).emit("RECEIVE_CHAT_COMMENT_FOR_STREAMER", messages);
+  //   }
+  // });
+  socket.on("DELETE_HISTORY_COMMENT_BY_USERID", (userID) => {
+    chatHistory = chatHistory.filter(
+      (message) => message.streamerID !== userID
+    );
   });
 });
