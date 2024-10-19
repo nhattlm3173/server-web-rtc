@@ -3,12 +3,14 @@ const io = require("socket.io")(process.env.PORT || 3000, {
     origin: "*", // Cho phép tất cả các nguồn (không khuyến khích dùng trong sản xuất)
     methods: ["GET", "POST"], // Các phương thức được phép
     allowedHeaders: ["my-custom-header"], // Header được phép
-    credentials: true, // Cho phép gửi cookie
+    credentials: true,
+    // Cho phép gửi cookie
   },
+  maxHttpBufferSize: 50 * 1024 * 1024,
 });
 const arrUserInfo = [];
 const arrWatchStreamUsers = [];
-let chatHistory = [];
+const chatHistory = [];
 let currentStreamer = null;
 let streamID;
 io.on("connection", (socket) => {
@@ -38,7 +40,7 @@ io.on("connection", (socket) => {
         arrWatchStreamUsers.push(user);
       }
 
-      console.log(arrWatchStreamUsers);
+      // console.log(arrWatchStreamUsers);
       if (currentStreamer) {
         console.log(currentStreamer);
         io.emit("NEW_USER_JOIN_LIVESTREAM", user.peerID);
@@ -49,7 +51,7 @@ io.on("connection", (socket) => {
   socket.on("USER_START_LIVESTREAM", (user) => {
     // currentStreamer = user.peerID; // Lưu peerID của người đang livestream
     currentStreamer = socket.id;
-    console.log(arrWatchStreamUsers);
+    // console.log(arrWatchStreamUsers);
     io.to(currentStreamer).emit("GET_WATCHSTREAMLIST", arrWatchStreamUsers);
     socket.broadcast.emit("SOMEONE_LIVESTREAMING", {
       streamer: user.peerID,
@@ -106,8 +108,10 @@ io.on("connection", (socket) => {
     }
   });
   socket.on("NEW_CHAT_MESSAGE", (data) => {
-    const { userID, message } = data;
+    const { userID, receiverId, senderId, message } = data;
     const user = arrUserInfo.find((u) => u.peerID === userID);
+    const receiver = arrUserInfo.find((u) => u.peerID === receiverId);
+    // console.log("senderId: " + senderId)
     if (user) {
       const chatMessage = { username: user.username, message };
       // chatHistory.push(chatMessage);
@@ -151,15 +155,24 @@ io.on("connection", (socket) => {
       }
     }
   });
-  // socket.on("RELOAD_COMMENT_STREAN", (userID) => {
-  //   const messages = chatHistory.filter((u) => u.streamerID === userID);
-  //   if (messages.length > 0) {
-  //     io.to(socket.id).emit("RECEIVE_CHAT_COMMENT_FOR_STREAMER", messages);
-  //   }
-  // });
   socket.on("DELETE_HISTORY_COMMENT_BY_USERID", (userID) => {
     chatHistory = chatHistory.filter(
       (message) => message.streamerID !== userID
     );
+  });
+  socket.on("SEND_FILE", (data) => {
+    const { file, fileName, fileType, userID, receiverId } = data;
+    const user = arrUserInfo.find((u) => u.peerID === userID);
+    const receiver = arrUserInfo.find((u) => u.peerID === receiverId);
+    console.log("aaa");
+    if (user && receiver) {
+      const fileMessage = {
+        username: user.username,
+        fileName,
+        fileType,
+        fileData: file, // Dữ liệu file dưới dạng binary
+      };
+      io.to(receiver.socketID).emit("RECEIVE_FILE", fileMessage);
+    }
   });
 });
