@@ -1,13 +1,9 @@
 const io = require("socket.io")(process.env.PORT || 3000, {
   cors: {
-    origin: [
-      "https://nhattlm3173.github.io",
-      "http://127.0.0.1:5500",
-      "http://localhost:3000",
-    ], // Cho phép tất cả các nguồn (không khuyến khích dùng trong sản xuất)
-    methods: ["GET", "POST"], // Các phương thức được phép
-    allowedHeaders: ["my-custom-header"], // Header được phép
-    credentials: true,
+    origin: "*", // Cho phép tất cả các nguồn (không khuyến khích dùng trong sản xuất)
+    methods: "*", // Các phương thức được phép
+    // allowedHeaders: ["my-custom-header"], // Header được phép
+    // credentials: true,
     // Cho phép gửi cookie
   },
   maxHttpBufferSize: 50 * 1024 * 1024,
