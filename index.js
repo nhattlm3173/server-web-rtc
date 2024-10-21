@@ -1,16 +1,16 @@
 const io = require("socket.io")(process.env.PORT || 3000, {
   cors: {
     origin: "*", // Cho phép tất cả các nguồn (không khuyến khích dùng trong sản xuất)
-    methods: "*", // Các phương thức được phép
-    // allowedHeaders: ["my-custom-header"], // Header được phép
-    // credentials: true,
+    methods: ["GET", "POST"], // Các phương thức được phép
+    allowedHeaders: ["my-custom-header"], // Header được phép
+    credentials: true,
     // Cho phép gửi cookie
   },
   maxHttpBufferSize: 50 * 1024 * 1024,
 });
 const arrUserInfo = [];
 const arrWatchStreamUsers = [];
-const chatHistory = [];
+let chatHistory = [];
 let currentStreamer = null;
 let streamID;
 io.on("connection", (socket) => {
