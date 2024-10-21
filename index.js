@@ -1,7 +1,7 @@
 const io = require("socket.io")(process.env.PORT || 3000, {
   cors: {
     origin: [
-      "https://nhattlm3173.github.io/WebUsingRTC",
+      "https://nhattlm3173.github.io",
       "http://127.0.0.1:5500",
       "http://localhost:3000",
     ], // Cho phép tất cả các nguồn (không khuyến khích dùng trong sản xuất)
